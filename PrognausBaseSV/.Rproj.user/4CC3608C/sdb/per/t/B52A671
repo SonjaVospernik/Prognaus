@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "library(PrognausBaseSV)\n\n###############################################\n#Help pages\n###############################################\nhelp(\"BAI.P\")\nhelp(\"id.P\")\nhelp(\"ih.P\")\nhelp(\"CR.P\")\nhelp(\"Mort.P\")\nhelp(\"fPoll\")\nhelp(\"BAL.P\")\n\n####################################################\n#Example Simulation 1992-1997\n###################################################\nsetwd(\"C:/Eigene_Dateien/AaLehre/BWS_StatGrow/Prognaus_R\")\ntest.Baum<-read.csv(\"Baum92.csv\")\ntest.Baum<-subset(test.Baum, select=c(\"PflNr\",\"BaumNr\",\"Baumart\",\n                                      \"BHD\",\"Hoehe\",\"nrep\"))\ntest.Pfl<-read.csv(\"STO77.csv\")\ntest<-merge(test.Baum, test.Pfl, by.x=\"PflNr\", by.y=\"PflNr\")\n\n#Berechnung von G und V\ntest$Gha<-(test$BHD/100)^2*pi/4*test$nrep\ntest$Vha<-vPoll(BART=test$Baumart,BHD_cm=test$BHD,H_m=test$Hoehe)*test$nrep\n\n#Berechnung der Oberhöhe\ntest$OH<-OH.Ass(ID_Punkt=test$PflNr,BART=test$Baumart, BHD_cm = test$BHD,\n                Hoehe_m = test$Hoehe,nrep = test$nrep)\n\n#Berechnung von Konkurrenzmaßen BAL, CCF\ntest$BAL<-BAL.P(ID_Punkt = test$PflNr, ID_Baum=test$BaumNr,\n                BHD_cm = test$BHD,G_m2ha=test$Gha)\ntest$CCF<-CCF.P(ID_Punkt=test$PflNr,BART = test$Baumart,BHD_cm = test$BHD,\n                nrep=test$nrep)\n\n#Berechnung des Kronenanteils\ntest$CR<-CR.P(BART = test$Baumart,BHD_cm = test$BHD,H_m=test$Hoehe,\n              BAL = test$BAL,CCF=test$CCF,\n              Seehoehe_m = test$Elev,Hangneigung_Proz = test$Slope,\n              Exposition_Grad = test$Expo)\n\n\n#Berechnung des Zuwachses\ntest$BHDneu<-test$BHD+\n  id.P(BART=test$Baumart,BHD_cm = test$BHD,\n                           CR_Ant = test$CR,BAL = test$BAL, CCF = test$CCF,\n                           Seehoehe_m = test$Elev,Hangneigung_Proz =test$Slope,\n                           Exposition_Grad = test$Expo,HF_cm = test$HF,HH_cm =test$HH,\n                           Bodentiefe_cm = test$Gruend,Bodenfeuchte = test$Feuchtkl,\n                           Relief = test$Relief,Bodentyp = test$Soiltyp,\n                           Vegetationstyp = test$Vegtyp,Wuchsbezirk = test$WGBNR,PL = 5,\n       MSE_ja=1)\n\n\ntest$Hoeheneu<-test$Hoehe+ih.P(BART=test$Baumart,H_m = test$Hoehe,\n                               Ho_m=test$OH,BAL=test$BAL,CCF = 99,\n                               Seehoehe_m = test$Elev,Hangneigung_Proz = test$Slope,\n                               Exposition_Grad = test$Expo,Bodentiefe_cm = test$Gruend,\n                               Bodenfeuchte = test$Feuchtkl,Relief = test$Relief,\n                               Bodentyp = test$Soiltyp,Wuchsbezirk = test$WGBNR,PL = 5)\n\n#########################################################################\n#Nach Mortalität Update sämtlicher Konkurrenzmaße!!\n#Berechnung von Mortalität\ntest$nrepneu<-test$nrep*(1-Mort.P(BART = test$Baumart,BHD_cm = test$BHD,\n                                  BAL = test$BAL,CR_Ant = test$CR,PL=5))\n\n###########################################################################\n\ntest1<-aggregate(cbind(test$nrep, test$Gha, test$Vha), by=list(test$PflNr), FUN=sum)\n\ntest2<-aggregate(cbind(test$CCF, test$OH), by=list(test$PflNr), FUN=mean)\ntest<-test[order(test$PflNr,-test$BHD),]\n",
+    "created" : 1490196377934.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1374074209",
+    "id" : "B52A671",
+    "lastKnownWriteTime" : 1490196872,
+    "last_content_update" : 1490196872420,
+    "path" : "C:/Eigene_Dateien/AaLehre/BWS_StatGrow/Prognaus_R/PrognausTest/Prognaus_Test.R",
+    "project_path" : null,
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

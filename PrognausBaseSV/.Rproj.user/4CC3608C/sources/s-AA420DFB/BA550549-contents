@@ -1,0 +1,169 @@
+\usepackage[utf8]{inputenc}
+
+<<echo=FALSE, results=hide>>=
+#############################################################
+#Frage: NOrt, Nha aus Winkelzählprobe
+##ganzzahlig abgerundet oder richtig gerundet
+#############################################################
+
+## DATA GENERATION
+#Pfad für Formzahlfunktion
+# Pfad<-"C:/Eigene_Dateien/AaLehre/BWS_BiometrieI/DPrufung/Fragensammlung/APoll/"
+# source(paste0(Pfad,"fPoll.R"))
+
+source(paste0(fragen_vz,"/APoll/fPoll.R"))
+
+##############################################################
+#Bestandesflaeche, BHD ganzzahlig abgerundet, BHD auf mm
+##############################################################
+Flaeche<-round(runif(min=0.5, max=2, n=1),1) #Bestandesflächen zwischen 0.5 und 2 ha
+optBHD<-sample(c("Der BHD wurde ganzzahlig abgerundet", "Der BHD wurde auf mm genau gemessen"),1)
+
+###############################################################
+#Winkelzählprobe generieren
+###############################################################
+#Baumart generieren
+BA.vec<-c(1,2,3,4,10) #Fichte, Tanne, Lärche, Kiefer, Buche
+BAname.vec<-c("Fichte","Tanne", "Lärche","Kiefer","Buche")
+BA<-sample(BA.vec,1)
+BAname<-BAname.vec[which(BA.vec==BA)]
+
+#BHD generieren
+anz.b<-round(runif(min=3,max=5, n=1)) #Anzahl an Bäume in WZP
+dmean<-runif(min=20, max=40, n=1) #Mittlerer Durchmesser
+dsd=dmean*0.4 #Standardabweichung für Generierung normalverteilter Durchmesser
+d<-round(rnorm(n=anz.b, mean=dmean, sd=dsd),1) #Durchmesser generieren
+
+#durch Annahme der Normalverteilung können auch negative BHD generiert werden
+for(i in 1:length(d)) {
+  if(d[i]<5) { 
+    d[i]<-round(5+runif(min=0, max=3, n=1),1)
+  }
+}
+
+if (optBHD=="Der BHD wurde ganzzahlig abgerundet"){
+  d<-round(d) #Durchmesser generieren
+  d<-d+0.5
+}
+
+#Ausgeglichenen Höhen aus Höhenkurve + Zufallswert
+h <- round(1.3 + 1 / (0.1397567 + 1.6374089/d)^2 + rnorm(n=length(d), mean=0, sd=sqrt(4)),0)
+
+#Tabelle mit Daten von WZP generieren
+Tab.WZP<-data.frame(baname=BAname,d=d,h=h,ba=BA)
+
+##########################################################################
+#Auswertung der Winkelzählprobe
+##########################################################################
+#Auswertung
+Tab.WZP$fz<-round(fPoll(Tab.WZP$ba,Tab.WZP$d,Tab.WZP$h),3)
+Tab.WZP$g<-(Tab.WZP$d/100)^2*pi/4
+Tab.WZP$v<-Tab.WZP$g*Tab.WZP$h*Tab.WZP$fz
+
+#N,G,V
+Tab.WZP$N<-4/Tab.WZP$g
+Tab.WZP$G<-4
+Tab.WZP$V<-4*Tab.WZP$h*Tab.WZP$fz
+
+#Zusammenfassung der Werte am Hektar
+Nha<-sum(Tab.WZP$N)
+Gha<-sum(Tab.WZP$G)
+Vha<-sum(Tab.WZP$V)
+
+# Werte am Ort
+NOrt<-Nha*Flaeche
+GOrt<-Gha*Flaeche
+VOrt<-Vha*Flaeche
+
+#Einschlussflaecher der Winkelzählprobe
+Tab.WZP$Ri<-Tab.WZP$d/4
+Tab.WZP$ai<-Tab.WZP$Ri^2*pi
+Aimean<-mean(Tab.WZP$ai)
+
+
+#Fragentyp festlegen
+fragentyp.vec<-c("NOrt","Nha")
+fragentext.vec<-c("die Stammzahl am Ort", "die Stammzahl am Hektar")
+fragentyp<-sample(fragentyp.vec,1)
+fragentext<-fragentext.vec[which(fragentyp.vec==fragentyp)]
+
+#Plausible Lösungen generieren
+Q1<-NOrt
+Q2<-Nha
+Q3<-NOrt*runif(1,min=1.05,max=1.1)
+Q4<-Nha*runif(1,min=1.05,max=1.1)
+Q5<-NOrt*runif(1,min=1.1,max=1.2)
+Q6<-Nha*runif(1,min=1.1,max=1.2)
+
+
+#Lösungen in einen Vektor und sortieren
+Q<-c(Q1,Q2,Q3,Q4,Q5,Q6)
+QT<-ifelse(fragentyp %in% c("NOrt"),Q1,Q2)
+QT<-round(QT)
+rm(Q1,Q2,Q3,Q4,Q5,Q6)
+Q<-unique(round(Q))
+Q<-sort(Q)
+
+#Vektor mit richtig/falsch generieren
+
+S<-ifelse(Q==QT,TRUE,FALSE)
+
+## QUESTION/ANSWER GENERATION
+
+qu<- format(Q,nsmall=0)
+
+sol <- S
+
+qu_sol <- data.frame(cbind(qu,sol))
+#qu_sol <- qu_sol[sample(nrow(qu_sol), nrow(qu_sol)), ] #Mischen der Fragen und Antworten
+qu <- as.character(qu_sol$qu)
+sol <- as.logical(qu_sol$sol)
+exsol <- sol*1
+exsol <- paste(exsol,  sep="", collapse="")
+@
+
+\begin{question}
+ 
+Sie haben in einem \Sexpr{Flaeche} ha großem Bestand Winkelzählproben mit dem Zählfaktor k=4m²/ha angelegt. \Sexpr{optBHD}. Berechnen sie \Sexpr{fragentext}!
+
+<<echo=FALSE, results=tex>>=
+library(xtable)
+
+Tab.Stud<-subset(Tab.WZP, select=c(baname,d,h,fz))
+
+if (optBHD=="Der BHD wurde ganzzahlig abgerundet"){
+  Tab.Stud$d<-Tab.Stud$d-0.5 #0.5 cm für Angabentablle wieder abziehen
+}
+
+addtorow <- list()
+addtorow$pos <- list(-1)
+addtorow$command <-  "\\hline Baumart & BHD [cm] & Höhe [m] & fz\\\\"
+
+My.tab<-xtable(Tab.Stud, digits=c(0,0,1,0,3), align="|c|c|c|c|c|",
+              caption="Winkelzählprobe")
+print(My.tab, hline.after = c(0, nrow(Tab.Stud)),
+                              floating=FALSE,
+                              include.rownames=F,
+                              add.to.row=addtorow,
+                              include.colnames = F)
+@
+
+
+
+<<echo=FALSE, results=hide, results=tex>>=
+answerlist(qu)
+@
+
+\end{question}
+
+
+\begin{solution}
+<<echo=FALSE, results=hide, results=tex>>=
+answerlist(ifelse(sol, "True", "False"))
+@
+
+\end{solution}
+
+%% META-INFORMATION
+%% \extype{mchoice}
+%% \exsolution{\Sexpr{exsol}}

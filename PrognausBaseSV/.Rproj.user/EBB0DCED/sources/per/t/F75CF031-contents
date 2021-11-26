@@ -1,0 +1,103 @@
+library(rgdal)
+library(raster)
+library(rgeos)
+library(sp)
+library(spatstat)
+
+setwd("D:/Eigene_Dateien/AA_Lehre/AWiss_Arbeiten/ZDiss/A_Hahn/DTMs/DTM_end")
+dhm2<-raster("Bestand2_dtm2.tif")
+slope<-terrain(dhm2, type="slope", unit="degrees")
+
+plot(dhm2)
+plot(slope)
+
+
+setwd("D:/Eigene_Dateien/AA_Lehre/AWiss_Arbeiten/ZDiss/A_Hahn/C_Vollauf_Plots/")
+Voll<-read.csv("Daten_Vollaufnahme_final.csv")
+Bestand2<-Voll[Voll$Bestand==2,]
+Bestand2_sp<-SpatialPointsDataFrame(cbind(Bestand2$x_final, Bestand2$y_final), Bestand2)
+plot(Bestand2_sp, add=TRUE)
+
+#Erstellen einer konvexen Hülle
+w <- convexhull.xy(Bestand2$x_final,Bestand2$y_final)
+plot(Bestand2_sp)
+plot(w, add=TRUE)
+
+# Bestand2.ppp <- ppp(Bestand2$x_final, Bestand2$y_final,
+#                     window=owin(c(1.8627,62.4484),c(-113.4534,-40.503)))
+
+Bestand2.ppp <- ppp(Bestand2$x_final, Bestand2$y_final,
+                    window=as.owin(w))
+
+#Quadrat count
+Q<-quadratcount(Bestand2.ppp, nx=10, ny=10)
+plot(Q, add=TRUE)
+
+#Compute density for each quadrant
+Q.d<-intensity(Q)
+plot(intensity(Q*10000, image=TRUE), main=NULL, las=1)
+plot(Bestand2_sp, add=TRUE)
+plot
+plot(Bestand2.ppp)
+
+
+#Kernel density
+K1<-density(Bestand2.ppp, kernel="epanechnikov", sigma=10)
+str(K1)
+plot(K1*10000, main=NULL, las=1)
+contour(K1*10000, add=TRUE)
+plot(Bestand2.ppp, add=TRUE)
+
+#Mean nearest neighbour distance
+NN1m<-mean(nndist(Bestand2.ppp, k=1))
+NN2m<-mean(nndist(Bestand2.ppp, k=2))
+NN3m<-mean(nndist(Bestand2.ppp, k=3))
+NN4m<-mean(nndist(Bestand2.ppp, k=4))
+NN5m<-mean(nndist(Bestand2.ppp, k=5))
+NN6m<-mean(nndist(Bestand2.ppp, k=6))
+NN7m<-mean(nndist(Bestand2.ppp, k=7))
+NN8m<-mean(nndist(Bestand2.ppp, k=8))
+NN9m<-mean(nndist(Bestand2.ppp, k=9))
+NN10m<-mean(nndist(Bestand2.ppp, k=10))
+
+#Nearest neighbour distance
+Bestand2$NN1<-nndist(Bestand2.ppp, k=1)
+Bestand2$NN2<-nndist(Bestand2.ppp, k=2)
+Bestand2$NN3<-nndist(Bestand2.ppp, k=3)
+Bestand2$NN4<-nndist(Bestand2.ppp, k=4)
+Bestand2$NN5<-nndist(Bestand2.ppp, k=5)
+Bestand2$NN6<-nndist(Bestand2.ppp, k=6)
+Bestand2$NN7<-nndist(Bestand2.ppp, k=7)
+Bestand2$NN8<-nndist(Bestand2.ppp, k=8)
+Bestand2$NN9<-nndist(Bestand2.ppp, k=9)
+Bestand2$NN10<-nndist(Bestand2.ppp, k=10)
+
+#Nearest neighbour distance
+Bestand2_sp@data$NN1<-nndist(Bestand2.ppp, k=1)
+Bestand2_sp@data$NN2<-nndist(Bestand2.ppp, k=2)
+Bestand2_sp@data$NN3<-nndist(Bestand2.ppp, k=3)
+Bestand2_sp@data$NN4<-nndist(Bestand2.ppp, k=4)
+Bestand2_sp@data$NN5<-nndist(Bestand2.ppp, k=5)
+Bestand2_sp@data$NN6<-nndist(Bestand2.ppp, k=6)
+Bestand2_sp@data$NN7<-nndist(Bestand2.ppp, k=7)
+Bestand2_sp@data$NN8<-nndist(Bestand2.ppp, k=8)
+Bestand2_sp@data$NN9<-nndist(Bestand2.ppp, k=9)
+Bestand2_sp@data$NN10<-nndist(Bestand2.ppp, k=10)
+
+#Equal interval 6 Klassen - 1. Neareast neighbour
+class.width<-max(Bestand2_sp@data$NN1)-min(Bestand2_sp@data$NN1)/6
+cuts<-min(Bestand2_sp@data$NN1)+width*c(0:6)
+blues <- colorRampPalette(c('yellow', 'orange', 'blue', 'dark blue'))
+spplot(Bestand2_sp, 'NN1', cuts=cuts, col.regions=blues(6), pch=20, cex=2)
+
+#Equal interval 6 Klassen - 2. Neareast neighbour
+class.width<-max(Bestand2_sp@data$NN2)-min(Bestand2_sp@data$NN2)/6
+cuts<-min(Bestand2_sp@data$NN2)+width*c(0:6)
+blues <- colorRampPalette(c('yellow', 'orange', 'blue', 'dark blue'))
+spplot(Bestand2_sp, 'NN2', cuts=cuts, col.regions=blues(6), pch=20, cex=2)
+
+#Equal interval 6 Klassen - 4. Neareast neighbour
+class.width<-max(Bestand2_sp@data$NN4)-min(Bestand2_sp@data$NN4)/6
+cuts<-min(Bestand2_sp@data$NN4)+width*c(0:6)
+blues <- colorRampPalette(c('yellow', 'orange', 'blue', 'dark blue'))
+spplot(Bestand2_sp, 'NN4', cuts=cuts, col.regions=blues(6), pch=20, cex=2)

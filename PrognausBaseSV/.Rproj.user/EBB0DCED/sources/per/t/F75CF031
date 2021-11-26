@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1583486230246.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1483616910",
+    "id" : "F75CF031",
+    "lastKnownWriteTime" : 1583499065,
+    "last_content_update" : 1583499065973,
+    "path" : "D:/Eigene_Dateien/AA_Lehre/AWiss_Arbeiten/ZDiss/A_Hahn/Kernel_density_NN.r",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "53,37",
+        "scrollLine" : "42"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

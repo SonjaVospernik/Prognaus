@@ -1,0 +1,446 @@
+\documentclass[a4paper]{article}
+\usepackage{cmap} % Auch Umlaute durchsuchbar; muss vor fontenc geladen werden
+\usepackage[naustrian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{parskip} %Einzug aus, Absatzabstand ein
+\usepackage{booktabs}
+\usepackage{xspace}
+\usepackage[singlespacing]{setspace}
+\usepackage{a4wide}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\renewcommand{\thesection}{}
+\renewcommand{\thesubsection}{}
+\newcommand{\Rlogo}{\raisebox{-.1mm}{\includegraphics[width=1em]{Rlogo-5}}}
+
+%% das hyperref package musz immer als letztes geladen werden!
+\usepackage[pdftex, colorlinks, linkcolor=blue, urlcolor=blue, citecolor=blue, breaklinks=true]{hyperref}
+
+\hypersetup{pdfauthor={BOKU - Institut für Waldwachstum}}
+\hypersetup{pdftitle={Zustandserhebung und Ertragsprognose}}
+\hypersetup{pdfsubject={Zustandserhebung und Ertragsprognose}}
+\hypersetup{pdfcreator={Sonja Vospernik}}
+\hypersetup{pdfkeywords={Zuwachs}}
+
+\title{{\large Zustandserhebung und Ertragsprognose (914.325)}\\
+Seminartag 2  \\
+Zuwachsberechnung und Zuwachsprognose
+}
+\author{Sonja Vospernik}
+\date{09.11.2018}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+  \includegraphics[height=0.15\textheight]{PermInv.jpg}
+  \includegraphics[height=0.15\textheight]{TempInv.jpg}
+\end{center}
+
+
+<<include=FALSE>>=
+library(knitr)
+opts_chunk$set(
+  tidy = TRUE, background="white"
+)
+options(width = 55, str = strOptions(strict.width = "cut"))
+@
+\vspace{2.5cm}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{Sonja Vospernik}
+\fancyhead[L]{Zustandserhebung und Ertragsprognose}
+
+\section{Zuwachsberechnung}
+
+\begin{enumerate}[{1}.1]
+  \item Lesen sie den Datensatz \texttt{DatKorr.csv} in R ein und benennen sie den Dataframe \texttt{TAB}!
+  \item Berechnen sie die Stammzahl, die Einzelbaumgrundfläche und das Einzelbaumvolumen für beide Erhebungsperioden.
+  \item Berechnen sie die Grundfläche und Vorrat je Hektar für beide Erhebungsperioden.
+  \item Berechnen sie den Zuwachs nach dem Anfangswertverfahren.
+  \item Berechnen sie den Zuwachs nach dem Differenzenverfahren.
+  \item Berechnen sie den mittleren Zuwachs und dessen Vertrauensintervall für alle Inventurpunkt.
+\end{enumerate}
+
+\section{Zuwachsprognose}
+
+\subsection{Ertragstafel}
+
+\begin{center}
+  \includegraphics[height=0.15\textheight]{Ertragstafel.jpg}
+  \includegraphics[height=0.15\textheight]{Misch2.jpg}
+\end{center}
+
+\begin{enumerate}[{2}.1]
+  \item Lesen sie die Daten der 1. Inventurperiode \texttt{DatBonStud.csv} mit den Bonitäten je Probepunkt ein und wählen sie die Ertragstafelgrundfläche, den Ertragstafelvorrat und den laufenden Zuwachs aus!
+  \item Wählen sie aus dem Datensatz die Daten der ersten Inventurperiode aus und codieren sie
+  sonstiges Laubholz als Buche um!
+  \item Summieren sie die gemessene Grundfläche baumartenweise auf und erstellen sie eine Tabelle \texttt{TAB.Bon} aus gemessener Grundfläche und Ertragstafelwerten!
+  \item Berechnen sie die Flächenanteile nach der Ertragstafel und den Bestockungsgrad!
+  \item Berechnen sie den periodisch laufenden Zuwachs nach der Ertragstafel.
+  \item Geben sie den Mittelwert und das Vertrauensintervall für den Ertragstafelvorrat an!
+
+
+\end{enumerate}
+
+\subsection{Waldwachstumssimulation}
+
+\begin{center}
+  \includegraphics[height=0.25\textheight]{BAICR.pdf}
+\end{center}
+
+\begin{enumerate}[{3}.1]
+  \item Lesen sie die Daten mit der Waldwachstumssimulation \texttt{DatPrognausStud.csv}!
+  \item Verbinden sie die Tabelle mit den beobachteten Daten und vergleichen sie den beobachteten BHD mit dem prognostizieten BHD und den beobachteten Durchmesserzuwachs mit dem prognostizierten Durchmesserzuwachs.
+  \item Plotten sie die prognostizierten Höhen über den beobachteten Höhen und den prognostizierten Höhenzuwachs über dem beobachteten.
+  \item Berechnen sie den Zuwachs nach dem Anfangswertverfahren und dessen Vertrauensintervall aus den
+  prognostizierten Werten.
+\end{enumerate}
+
+\section{Lösung Zuwachsberechnung}
+
+
+\begin{enumerate}[{1}.1]
+  \item Lesen sie den Datensatz \texttt{DatKorr.csv} ein und benennen sie den Dataframe \texttt{TAB}!
+
+<<echo = TRUE, tidy = TRUE>>=
+#Setzen des Arbeitsverzeichnisses
+setwd("C:/Eigene_Dateien/AaLehre/BWS_ZustE/AZustE_neu/Tag2_Zuwachs/Seminartag/")
+#Einlesen der Daten
+TAB<-read.csv2("DatKorr.csv")
+#Datensatz zusammenfassen
+#summary(TAB)
+@
+
+\item Berechnen sie die Stammzahl, die Einzelbaumgrundfläche und das Einzelbaumvolumen für beide Erhebungsperioden.
+
+<<echo = TRUE, tidy = TRUE>>=
+#Stammzahl
+TAB$n1<-4/((TAB$BHD1.mm/1000)^2*pi/4) # 1. Aufnahme
+TAB$n2<-4/((TAB$BHD2.mm/1000)^2*pi/4) # 2. Aufnahme
+
+#Einzelbaumgrundfläche
+TAB$g1<-(TAB$BHD1.mm/1000)^2*pi/4
+TAB$g2<-(TAB$BHD2.mm/1000)^2*pi/4
+
+#Formzahl
+source("fPoll.R")
+TAB$fz1<-fPoll(species=TAB$Baumart, dbh_cm = TAB$BHD1.mm/10, height_m = TAB$Hoehe1.m)
+TAB$fz2<-fPoll(species=TAB$Baumart, dbh_cm = TAB$BHD2.mm/10, height_m = TAB$Hoehe2.m)
+
+#Einzelbaumvolumen
+TAB$v1<-TAB$g1*TAB$Hoehe1.m*TAB$fz1
+TAB$v2<-TAB$g2*TAB$Hoehe2.m*TAB$fz2
+@
+
+\item Berechnen sie die Grundfläche und Vorrat je Hektar für beide Erhebungsperioden.
+
+<<echo = TRUE, tidy = TRUE>>=
+#Repräsentierte Grundfläche jedes Baumes
+TAB$Grep1<-0
+TAB$Grep2<-0
+TAB$Grep1[!is.na(TAB$BHD1.mm)]<-4
+TAB$Grep2[!is.na(TAB$BHD2.mm)]<-4
+
+#Grundfläche je Hektar
+TAB$Gha1<-ave(TAB$Grep1, TAB$WZP_Nr, FUN=sum)
+TAB$Gha2<-ave(TAB$Grep2, TAB$WZP_Nr, FUN=sum)
+
+#Repräsentiertes Volumen jedes Baumes
+TAB$Vrep1<-0
+TAB$Vrep2<-0
+TAB$Vrep1[!is.na(TAB$BHD1.mm)]<-
+  TAB$Grep1[!is.na(TAB$BHD1.mm)]*
+  TAB$Hoehe1.m[!is.na(TAB$BHD1.mm)]*TAB$fz1[!is.na(TAB$BHD1.mm)]
+TAB$Vrep2[!is.na(TAB$BHD2.mm)]<-
+  TAB$Grep2[!is.na(TAB$BHD2.mm)]*
+  TAB$Hoehe2.m[!is.na(TAB$BHD2.mm)]*TAB$fz2[!is.na(TAB$BHD2.mm)]
+
+#Vorrat je Hektar
+TAB$Vha1<-ave(TAB$Vrep1, TAB$WZP_Nr, FUN=sum)
+TAB$Vha2<-ave(TAB$Vrep2, TAB$WZP_Nr, FUN=sum)
+
+#summary(TAB)
+@
+
+  \item Berechnen sie den Zuwachs nach dem Anfangswertverfahren.
+
+<<echo = TRUE, tidy = TRUE>>=
+#Anfangswertverfahren: Zuwachs aller Bäume, die zu beiden Zeitpunkten
+#in der Inventur sind plus Einwuchs
+
+#Periodenlänge
+TAB$PL<-TAB$Jahr2-TAB$Jahr1
+#Zuwachs des verbleibenden Bestandes
+TAB$iVrep_AWV<-(TAB$v2-TAB$v1)*TAB$n1/TAB$PL
+#Einwuchs
+TAB$iVrep_AWV[TAB$Einwuchs==2]<-TAB$Vrep2[TAB$Einwuchs==2]/TAB$PL[TAB$Einwuchs==2]
+#Fehlende Werte durch Null ersetzen zum Aufsummieren
+TAB$iVrep_AWV[is.na(TAB$iVrep_AWV)]<-0
+#Zuwachs pro Jahr und Hektar nach dem Anfangswertverfahren
+TAB$iVha_AWV<-ave(TAB$iVrep_AWV, TAB$WZP_Nr, FUN=sum)
+
+@
+
+
+  \item Berechnen sie den Zuwachs nach dem Differenzenverfahren.
+
+<<echo = TRUE, tidy = TRUE>>=
+#Differenzenverfahren: Vorrat am Ende - Vorrat am Anfang + Ausscheidenden Bestand
+
+#Ausscheidender Bestand
+TAB$VrepAus<-0
+TAB$VrepAus[TAB$Nutzung>0]<-TAB$Vrep1[TAB$Nutzung>0]
+TAB$VhaAus<-ave(TAB$VrepAus, TAB$WZP_Nr, FUN=sum)
+TAB$iVha_Diff<-(TAB$Vha2-TAB$Vha1+TAB$VhaAus)/TAB$PL
+
+@
+
+\item Berechnen sie den mittleren Zuwachs und dessen Vertrauensintervall für alle Inventurpunkt.
+
+<<echo = TRUE, tidy = TRUE>>=
+#Tabelle mit probepunktweisen Werten
+TAB.Pkt<-subset(TAB, select=c("WZP_Nr", "Gha1", "Gha2", "Vha1",
+                              "Vha2", "iVha_AWV", "iVha_Diff"))
+TAB.Pkt<-unique(TAB.Pkt)
+
+#Stichprobenumfang
+n.Pkt<-nrow(TAB.Pkt)
+
+#################################
+#Anfangswertverfahren
+#################################
+#Mittelwert
+mean_AWV<-mean(TAB.Pkt$iVha_AWV)
+
+#Standardfehler
+se_AWV<-sd(TAB.Pkt$iVha_AWV)/sqrt(n.Pkt)
+#t-Wert
+t.Wert<-qt(p=0.025,df=n.Pkt-1,lower.tail=F)
+#Vertrauensintervall
+VI_AWV<-c(mean_AWV+se_AWV*t.Wert,mean_AWV-se_AWV*t.Wert)
+
+###############################
+#Differenzenverfahren
+###############################
+#Mittelwert
+mean_Diff<-mean(TAB.Pkt$iVha_Diff)
+
+#Standardfehler
+se_Diff<-sd(TAB.Pkt$iVha_Diff)/sqrt(n.Pkt)
+
+#Vertrauensintervall
+VI_Diff<-c(mean_Diff+se_Diff*t.Wert,mean_Diff-se_Diff*t.Wert)
+
+@
+
+
+\end{enumerate}
+
+\section{Lösung Zuwachsprognose}
+
+\subsection{Ertragstafel}
+
+\begin{enumerate}[{2}.1]
+  \item Lesen sie die Daten der 1. Inventurperiode mit den Bonitäten je Probepunkt ein und wählen sie
+  die Ertragstafelgrundfläche, den Ertragstafelvorrat und den laufenden Zuwachs aus!
+
+<<echo = TRUE, tidy = TRUE>>=
+TAB.Stud.Bon<-read.csv2("DatBonStud.csv")
+TAB.Stud.Bon1<-TAB.Stud.Bon[,c("WZP_Nr","Baumartneu","Grundflaeche","Vorrat","lfZ")]
+colnames(TAB.Stud.Bon1)<-c("WZP_Nr","Baumartneu","G_ET","V_ET","lfZ_ET")
+@
+
+\item Wählen sie aus dem Datensatz die Daten der ersten Inventurperiode aus und codieren sie
+  sonstiges Laubholz als Buche um!
+
+<<echo = TRUE, tidy = TRUE>>=
+#Daten der 1. Inventurperiode
+TAB.P1<-TAB[!is.na(TAB$BHD1.mm),c("WZP_Nr", "Baumart", "BHD1.mm",
+                                  "Hoehe1.m", "Alter.Operat", "Grep1")]
+#Tabelle mit vorkommenden Baumarten
+table(TAB.P1$Baumart)
+#Laubholz mit Buche zusammenfassen
+LH.vec<-c(12,15,20,30)
+TAB.P1$Baumartneu<-TAB.P1$Baumart
+TAB.P1$Baumartneu[TAB.P1$Baumart %in% LH.vec]<-10
+#Tabelle mit zusammengefassten Baumarten
+table(TAB.P1$Baumartneu)
+@
+
+\item Summieren sie die gemessene Grundfläche baumartenweise auf und erstellen sie eine Tabelle \texttt{TAB.Bon} aus gemessener Grundfläche und Ertragstafelwerten!
+
+<<echo = TRUE, tidy = TRUE>>=
+#Baumartenweise Berechnung der gemessenen Grundfläche
+TAB.GWZP<-aggregate(TAB.P1$Grep1, by=list(TAB.P1$WZP_Nr,TAB.P1$Baumartneu), FUN=sum)
+colnames(TAB.GWZP)<-c("WZP_Nr", "Baumartneu", "G_WZP")
+
+TAB.Bon<-merge(TAB.GWZP, TAB.Stud.Bon1)
+rm(TAB.GWZP, TAB.Stud.Bon, TAB.Stud.Bon1)
+
+@
+
+\item Berechnen sie die Flächenanteile nach der Ertragstafel und den Bestockungsgrad!
+
+ <<echo = TRUE, tidy = TRUE, warnings=FALSE>>=
+#Quotient aus gemessener Grundfläche und Ertragstafelgrundfläche
+TAB.Bon$QG_WZPET<-TAB.Bon$G_WZP/TAB.Bon$G_ET
+
+#Berechnen des Bestockungsgrades
+TAB.Bon$BG<-ave(TAB.Bon$QG_WZPET, TAB.Bon$WZP_Nr, FUN=sum)
+
+#Baumartenanteile
+TAB.Bon$BA<-TAB.Bon$QG_WZPET/TAB.Bon$BG
+
+@
+
+\item Berechen sie den periodisch laufenden Zuwachs nach der Ertragstafel!
+ <<echo = TRUE, tidy = TRUE, warning=FALSE, message=FALSE>>=
+#Zuwachsreduktionsfaktor
+source("StudZust.R")
+TAB.Bon$ZR<-ZRedSV(TAB.Bon$BG, TAB.Bon$Baumartneu)
+
+#Laufende Zuwachs:
+#laufender Zuwachs*Baumartenanteil*Zuwachsreduktion
+TAB.Bon$lfZ<-TAB.Bon$lfZ_ET*TAB.Bon$BA*TAB.Bon$ZR
+
+TAB.Pkt.Bon<-aggregate(TAB.Bon$lfZ, by=list(TAB.Bon$WZP_Nr), FUN=sum)
+colnames(TAB.Pkt.Bon)<-c("WZP_Nr", "lfZ")
+
+@
+
+\item Geben sie den Mittelwert und das Vertrauensintervall für den Ertragstafelvorrat an!
+
+<<echo = TRUE, tidy = TRUE>>=
+###############################
+#Ertragstafel
+###############################
+#Stichprobenumfang
+n.Pkt<-nrow(TAB.Pkt)
+
+#Mittelwert
+mean_ET<-mean(TAB.Pkt.Bon$lfZ)
+
+#t-Wert
+t.Wert<-qt(p=0.025,df=n.Pkt-1,lower.tail=F)
+
+#Standardfehler
+se_ET<-sd(TAB.Pkt.Bon$lfZ)/sqrt(n.Pkt)
+
+#Vertrauensintervall
+VI_ET<-c(mean_ET+se_ET*t.Wert,mean_ET-se_ET*t.Wert)
+
+@
+\end{enumerate}
+
+\subsection{Waldwachstumssimulation}
+
+\begin{enumerate}[{3}.1]
+  \item Lesen sie die Daten mit der Waldwachstumssimulation \texttt{DatPrognausStud.csv}!
+
+<<echo = TRUE, tidy = TRUE>>=
+TAB.Prog<-read.csv2("DatPrognausStud.csv")
+TAB.ObsPred<-merge(TAB, TAB.Prog, by=c("WZP_Nr", "BaumNr"), all.x=T)
+
+@
+
+
+  \item Verbinden sie die Tabelle mit den beobachteten Daten und Vergleichen sie den beobachteten BHD mit dem prognostizieten BHD und den beobachteten Durchmesserzuwachs mit dem prognostizierten Durchmesserzuwachs.
+
+<<echo = TRUE, tidy = TRUE>>=
+plot(BHD2.mm~BHD2.mm.P, data=TAB.ObsPred)
+
+#Berechnen von beobachtetem Durchmesserzuwachs
+TAB.ObsPred$id_obs<-TAB.ObsPred$BHD2.mm-TAB.ObsPred$BHD1.mm
+#Berechnen von prognostiziertem Durchmesserzuwachs
+TAB.ObsPred$id_pred<-TAB.ObsPred$BHD2.mm.P-TAB.ObsPred$BHD1.mm
+
+#Beobachtete und prognostizierte id
+plot(id_obs~id_pred, data=TAB.ObsPred)
+
+@
+
+
+  \item Plotten sie die prognostizierten Höhen über den beobachteten Höhen und den prognostizierten Höhenzuwachs über dem beobachteten.
+
+<<echo = TRUE, tidy = TRUE>>=
+#Plot der Höhen
+plot(Hoehe2.m~Hoehe2.m.P, data=TAB.ObsPred)
+
+#Berechnen vom beobachteten Höhenzuwachs
+TAB.ObsPred$ih_obs<-TAB.ObsPred$Hoehe2.m-TAB.ObsPred$Hoehe1.m
+#Berechnen vom prognostizierten Höhenzuwachs
+TAB.ObsPred$ih_pred<-TAB.ObsPred$Hoehe2.m.P-TAB.ObsPred$Hoehe1.m
+
+#Beobachtete und prognostizierte id
+plot(ih_obs~ih_pred, data=TAB.ObsPred)
+
+@
+
+
+\item Berechnen sie den Zuwachs nach dem Anfangswertverfahren und dessen Vertrauensintervall aus den
+  prognostizierten Werten.
+
+<<echo = TRUE, tidy = TRUE>>=
+#Einzelbaumgrundfläche
+TAB.ObsPred$g2.P<-(TAB.ObsPred$BHD2.mm.P/1000)^2*pi/4
+
+#Formzahl
+TAB.ObsPred$fz2.P<-fPoll(species=TAB.ObsPred$Baumart, dbh_cm = TAB.ObsPred$BHD2.mm.P/10,
+                        height_m = TAB.ObsPred$Hoehe2.m.P)
+
+#Einzelbaumvolumen
+TAB.ObsPred$v2.P<-TAB.ObsPred$g2.P*TAB.ObsPred$Hoehe2.m.P*TAB.ObsPred$fz2.P
+
+#Zuwachs des verbleibenden Bestandes
+TAB.ObsPred$iVrep_AWV.P<-(TAB.ObsPred$v2.P-TAB.ObsPred$v1)*TAB.ObsPred$n1/TAB.ObsPred$PL
+#Einwuchs
+TAB.ObsPred$iVrep_AWV.P[TAB.ObsPred$Einwuchs==2]<-
+  TAB.ObsPred$Vrep2[TAB.ObsPred$Einwuchs==2]/TAB.ObsPred$PL[TAB.ObsPred$Einwuchs==2]
+
+#Fehlende Werte durch Null ersetzen zum Aufsummieren
+TAB.ObsPred$iVrep_AWV.P[is.na(TAB.ObsPred$iVrep_AWV.P)]<-0
+
+#Zuwachs pro Jahr und Hektar nach dem Anfangswertverfahren
+TAB.ObsPred$iVha_AWV.P<-ave(TAB.ObsPred$iVrep_AWV.P, TAB.ObsPred$WZP_Nr, FUN=sum)
+
+@
+
+\item Vertrauensintervall des prognostizierten Zuwachs
+
+<<echo = TRUE, tidy = TRUE>>=
+#Tabelle mit probepunktweisen Werten
+TAB.Pkt1<-subset(TAB.ObsPred, select=c("WZP_Nr", "iVha_AWV.P"))
+TAB.Pkt1<-unique(TAB.Pkt1)
+
+#Stichprobenumfang
+n.Pkt1<-nrow(TAB.Pkt1)
+
+#################################
+#Anfangswertverfahren
+#################################
+#Mittelwert
+mean_AWV.P<-mean(TAB.Pkt1$iVha_AWV.P)
+
+#Standardfehler
+se_AWV.P<-sd(TAB.Pkt1$iVha_AWV.P)/sqrt(n.Pkt1)
+
+#t-Wert
+t.Wert<-qt(p=0.025,df=n.Pkt1-1,lower.tail=F)
+
+#Vertrauensintervall
+VI_AWV.P<-c(mean_AWV.P+se_AWV.P*t.Wert,mean_AWV.P-se_AWV.P*t.Wert)
+
+
+@
+
+
+
+\end{enumerate}
+
+\end{document}

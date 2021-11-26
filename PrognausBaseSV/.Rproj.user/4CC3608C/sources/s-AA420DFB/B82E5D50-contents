@@ -1,0 +1,299 @@
+#Setzen des Arbeitsverzeichnisses
+setwd("C:/Eigene_Dateien/AaLehre/BWS_ZustE/AZustE_neu/Tag2_Zuwachs/Seminartag/")
+
+#Einlesen der Daten
+TAB<-read.csv2("DatKorr.csv")
+#Datensatz zusammenfassen
+summary(TAB)
+
+######################################################################   
+#Stammzahl, die Einzelbaumgrundfläche und das Einzelbaumvolumen für beide Erhebungsperioden.
+######################################################################  
+
+#Stammzahl
+TAB$n1<-4/((TAB$BHD1.mm/1000)^2*pi/4) # 1. Aufnahme
+TAB$n2<-4/((TAB$BHD2.mm/1000)^2*pi/4) # 2. Aufnahme
+  
+#Einzelbaumgrundfläche
+TAB$g1<-(TAB$BHD1.mm/1000)^2*pi/4 
+TAB$g2<-(TAB$BHD2.mm/1000)^2*pi/4 
+  
+#Formzahl
+source("fPoll.R")
+TAB$fz1<-fPoll(species=TAB$Baumart, dbh_cm = TAB$BHD1.mm/10, height_m = TAB$Hoehe1.m) 
+TAB$fz2<-fPoll(species=TAB$Baumart, dbh_cm = TAB$BHD2.mm/10, height_m = TAB$Hoehe2.m) 
+  
+#Einzelbaumvolumen
+TAB$v1<-TAB$g1*TAB$Hoehe1.m*TAB$fz1 
+TAB$v2<-TAB$g2*TAB$Hoehe2.m*TAB$fz2 
+
+######################################################
+#Grundfläche und Vorrat je Hektar für beide Erhebungsperioden
+########################################################
+  
+#Repräsentierte Grundfläche jedes Baumes
+TAB$Grep1<-0
+TAB$Grep2<-0
+TAB$Grep1[!is.na(TAB$BHD1.mm)]<-4
+TAB$Grep2[!is.na(TAB$BHD2.mm)]<-4
+  
+#Grundfläche je Hektar
+TAB$Gha1<-ave(TAB$Grep1, TAB$WZP_Nr, FUN=sum)
+TAB$Gha2<-ave(TAB$Grep2, TAB$WZP_Nr, FUN=sum)
+  
+#Repräsentiertes Volumen jedes Baumes
+TAB$Vrep1<-0
+TAB$Vrep2<-0
+TAB$Vrep1[!is.na(TAB$BHD1.mm)]<-TAB$Grep1[!is.na(TAB$BHD1.mm)]*TAB$Hoehe1.m[!is.na(TAB$BHD1.mm)]*TAB$fz1[!is.na(TAB$BHD1.mm)]
+TAB$Vrep2[!is.na(TAB$BHD2.mm)]<-TAB$Grep2[!is.na(TAB$BHD2.mm)]*TAB$Hoehe2.m[!is.na(TAB$BHD2.mm)]*TAB$fz2[!is.na(TAB$BHD2.mm)]
+  
+#Vorrat je Hektar
+TAB$Vha1<-ave(TAB$Vrep1, TAB$WZP_Nr, FUN=sum)
+TAB$Vha2<-ave(TAB$Vrep2, TAB$WZP_Nr, FUN=sum)
+  
+summary(TAB)
+
+#######################################################   
+#Zuwachs nach dem Anfangswertverfahren.
+#######################################################
+
+#Anfangswertverfahren: Zuwachs aller Bäume, die zu beiden Zeitpunkten
+#in der Inventur sind plus Einwuchs
+    
+#Periodenlänge
+TAB$PL<-TAB$Jahr2-TAB$Jahr1
+#Zuwachs des verbleibenden Bestandes
+TAB$iVrep_AWV<-(TAB$v2-TAB$v1)*TAB$n1/TAB$PL
+#Einwuchs
+TAB$iVrep_AWV[TAB$Einwuchs==2]<-TAB$Vrep2[TAB$Einwuchs==2]/TAB$PL[TAB$Einwuchs==2]
+#Fehlende Werte durch Null ersetzen zum Aufsummieren
+TAB$iVrep_AWV[is.na(TAB$iVrep_AWV)]<-0
+#Zuwachs pro Jahr und Hektar nach dem Anfangswertverfahren
+TAB$iVha_AWV<-ave(TAB$iVrep_AWV, TAB$WZP_Nr, FUN=sum)
+
+########################################################  
+#Zuwachs nach dem Differenzenverfahren.
+########################################################
+  
+#Differenzenverfahren: Vorrat am Ende - Vorrat am Anfang + Ausscheidenden Bestand
+    
+#Ausscheidender Bestand
+TAB$VrepAus<-0
+TAB$VrepAus[TAB$Nutzung>0]<-TAB$Vrep1[TAB$Nutzung>0]
+TAB$VhaAus<-ave(TAB$VrepAus, TAB$WZP_Nr, FUN=sum)
+TAB$iVha_Diff<-(TAB$Vha2-TAB$Vha1+TAB$VhaAus)/TAB$PL
+
+#########################################################################
+#Mittlerer Zuwachs und dessen Vertrauensintervall für alle Inventurpunkt.
+#########################################################################
+  
+#Tabelle mit probepunktweisen Werten
+TAB.Pkt<-subset(TAB, select=c("WZP_Nr", "Gha1", "Gha2", "Vha1", "Vha2", "iVha_AWV", "iVha_Diff"))
+TAB.Pkt<-unique(TAB.Pkt)
+  
+#Stichprobenumfang
+n.Pkt<-nrow(TAB.Pkt)
+  
+###############################################
+#Mittlerer Zuwachs und VI Anfangswertverfahren
+###############################################
+
+#Mittelwert
+mean_AWV<-mean(TAB.Pkt$iVha_AWV)
+  
+#Standardfehler
+se_AWV<-sd(TAB.Pkt$iVha_AWV)/sqrt(n.Pkt)
+#t-Wert
+t.Wert<-qt(p=0.025,df=n.Pkt-1,lower.tail=F)
+#Vertrauensintervall
+VI_AWV<-c(mean_AWV+se_AWV*t.Wert,mean_AWV-se_AWV*t.Wert)
+  
+###############################################
+#Mittlerer Zuwachs und VI Differenzenverfahren
+###############################################
+  
+#Mittelwert
+mean_Diff<-mean(TAB.Pkt$iVha_Diff)
+  
+#Standardfehler
+se_Diff<-sd(TAB.Pkt$iVha_Diff)/sqrt(n.Pkt)
+  
+#Vertrauensintervall
+VI_Diff<-c(mean_Diff+se_Diff*t.Wert,mean_Diff-se_Diff*t.Wert)
+
+################################################################
+################################################################
+#Zuwachsprognose
+################################################################
+################################################################
+
+#Einlesen der Tabelle mit Ertragstafelwerten je Probepunkt und Baumart  
+TAB.Stud.Bon<-read.csv2("DatBonStud.csv")
+TAB.Stud.Bon1<-TAB.Stud.Bon[,c("WZP_Nr","Baumartneu","Grundflaeche","Vorrat","lfZ")]
+colnames(TAB.Stud.Bon1)<-c("WZP_Nr","Baumartneu","G_ET","V_ET","lfZ_ET")
+
+#########################################################################
+#Umkodieren des sonstigen Laubholz zu Buche
+#########################################################################
+  
+#Daten der 1. Inventurperiode
+TAB.P1<-TAB[!is.na(TAB$BHD1.mm),c("WZP_Nr", "Baumart", "BHD1.mm", "Hoehe1.m", "Alter.Operat", "Grep1")]
+#Tabelle mit vorkommenden Baumarten
+table(TAB.P1$Baumart)
+#Laubholz mit Buche zusammenfassen
+LH.vec<-c(12,15,20,30)
+TAB.P1$Baumartneu<-TAB.P1$Baumart
+TAB.P1$Baumartneu[TAB.P1$Baumart %in% LH.vec]<-10
+#Tabelle mit zusammengefassten Baumarten
+table(TAB.P1$Baumartneu)
+
+#####################################################################
+#Gemessene Grundfläche baumartenweise aufsummieren und 
+#mit Tabelle mit Bonitäten verbinden
+#####################################################################
+ 
+#Baumartenweise Berechnung der gemessenen Grundfläche
+TAB.GWZP<-aggregate(TAB.P1$Grep1, by=list(TAB.P1$WZP_Nr,TAB.P1$Baumartneu), FUN=sum)
+colnames(TAB.GWZP)<-c("WZP_Nr", "Baumartneu", "G_WZP")
+TAB.Bon<-merge(TAB.GWZP, TAB.Stud.Bon1)
+rm(TAB.GWZP, TAB.Stud.Bon, TAB.Stud.Bon1)
+  
+####################################################################################
+#Flächenanteile nach der Ertragstafel und Bestockungsgrad!
+####################################################################################
+    
+#Quotient aus gemessener Grundfläche und Ertragstafelgrundfläche
+TAB.Bon$QG_WZPET<-TAB.Bon$G_WZP/TAB.Bon$G_ET
+  
+#Berechnen des Bestockungsgrades
+TAB.Bon$BG<-ave(TAB.Bon$QG_WZPET, TAB.Bon$WZP_Nr, FUN=sum)
+  
+#Baumartenanteile
+TAB.Bon$BA<-TAB.Bon$QG_WZPET/TAB.Bon$BG
+  
+#########################################################
+#Laufender Zuwachs nach der Ertragstafel
+##########################################################
+  
+#Zuwachsreduktionsfaktor
+source("StudZust.R")
+TAB.Bon$ZR<-ZRedSV(TAB.Bon$BG, TAB.Bon$Baumartneu)
+  
+#Laufende Zuwachs: 
+#laufender Zuwachs*Baumartenanteil*Zuwachsreduktion
+TAB.Bon$lfZ<-TAB.Bon$lfZ_ET*TAB.Bon$BA*TAB.Bon$ZR
+  
+TAB.Pkt.Bon<-aggregate(TAB.Bon$lfZ, by=list(TAB.Bon$WZP_Nr), FUN=sum)
+colnames(TAB.Pkt.Bon)<-c("WZP_Nr", "lfZ")
+
+###############################
+#Ertragstafel
+###############################
+#Stichprobenumfang
+n.Pkt<-nrow(TAB.Pkt)
+  
+#Mittelwert
+mean_ET<-mean(TAB.Pkt.Bon$lfZ)
+  
+#t-Wert
+t.Wert<-qt(p=0.025,df=n.Pkt-1,lower.tail=F)
+  
+#Standardfehler
+se_ET<-sd(TAB.Pkt.Bon$lfZ)/sqrt(n.Pkt)
+  
+#Vertrauensintervall
+VI_ET<-c(mean_ET+se_ET*t.Wert,mean_ET-se_ET*t.Wert)
+  
+
+####################################################
+#Waldwachstumsimulation
+#####################################################
+TAB.Prog<-read.csv2("DatPrognausStud.csv")
+
+#Tabellen verbinden
+TAB.ObsPred<-merge(TAB, TAB.Prog, by=c("WZP_Nr", "BaumNr"), all.x=T)
+
+######################################################
+#Plotten von Durchmesser und Durchmesserzuwachs
+######################################################
+  
+#Plot von BHD observed over predicted   
+plot(BHD2.mm~BHD2.mm.P, data=TAB.ObsPred)
+  
+#Berechnen von beobachtetem Durchmesserzuwachs
+TAB.ObsPred$id_obs<-TAB.ObsPred$BHD2.mm-TAB.ObsPred$BHD1.mm
+#Berechnen von prognostiziertem Durchmesserzuwachs
+TAB.ObsPred$id_pred<-TAB.ObsPred$BHD2.mm.P-TAB.ObsPred$BHD1.mm
+  
+#Beobachtete und prognostizierte id
+plot(id_obs~id_pred, data=TAB.ObsPred)
+  
+
+####################################################
+#Plotten von Höhe und Höhenzuwachs
+#######################################################
+
+#Plot der Höhen
+plot(Hoehe2.m~Hoehe2.m.P, data=TAB.ObsPred)
+  
+#Berechnen vom beobachteten Höhenzuwachs
+TAB.ObsPred$ih_obs<-TAB.ObsPred$Hoehe2.m-TAB.ObsPred$Hoehe1.m
+#Berechnen vom prognostizierten Höhenzuwachs
+TAB.ObsPred$ih_pred<-TAB.ObsPred$Hoehe2.m.P-TAB.ObsPred$Hoehe1.m
+  
+#Beobachtete und prognostizierte id
+plot(ih_obs~ih_pred, data=TAB.ObsPred)
+  
+#############################################################
+#Zuwachs nach dem Anfangswertverfahren und Vertrauensintervall
+##############################################################
+
+#Einzelbaumgrundfläche
+TAB.ObsPred$g2.P<-(TAB.ObsPred$BHD2.mm.P/1000)^2*pi/4 
+  
+#Formzahl
+TAB.ObsPred$fz2.P<-fPoll(species=TAB.ObsPred$Baumart, dbh_cm = TAB.ObsPred$BHD2.mm.P/10,
+                           height_m = TAB.ObsPred$Hoehe2.m.P) 
+  
+#Einzelbaumvolumen
+TAB.ObsPred$v2.P<-TAB.ObsPred$g2.P*TAB.ObsPred$Hoehe2.m.P*TAB.ObsPred$fz2.P 
+  
+#Zuwachs des verbleibenden Bestandes
+TAB.ObsPred$iVrep_AWV.P<-(TAB.ObsPred$v2.P-TAB.ObsPred$v1)*TAB.ObsPred$n1/TAB.ObsPred$PL
+#Einwuchs
+TAB.ObsPred$iVrep_AWV.P[TAB.ObsPred$Einwuchs==2]<-TAB.ObsPred$Vrep2[TAB.ObsPred$Einwuchs==2]/TAB.ObsPred$PL[TAB.ObsPred$Einwuchs==2]
+#Fehlende Werte durch Null ersetzen zum Aufsummieren
+TAB.ObsPred$iVrep_AWV.P[is.na(TAB.ObsPred$iVrep_AWV.P)]<-0
+#Zuwachs pro Jahr und Hektar nach dem Anfangswertverfahren
+TAB.ObsPred$iVha_AWV.P<-ave(TAB.ObsPred$iVrep_AWV.P, TAB.ObsPred$WZP_Nr, FUN=sum)
+  
+###############################################################
+#Vertrauensintervall des prognostizierten Zuwachses
+##############################################################
+
+#Tabelle mit probepunktweisen Werten
+TAB.Pkt1<-subset(TAB.ObsPred, select=c("WZP_Nr", "iVha_AWV.P"))
+TAB.Pkt1<-unique(TAB.Pkt1)
+  
+#Stichprobenumfang
+n.Pkt1<-nrow(TAB.Pkt1)
+  
+#Mittelwert
+mean_AWV.P<-mean(TAB.Pkt1$iVha_AWV.P)
+  
+#Standarfehler
+se_AWV.P<-sd(TAB.Pkt1$iVha_AWV.P)/sqrt(n.Pkt1)
+#t-Wert
+t.Wert<-qt(p=0.025,df=n.Pkt1-1,lower.tail=F)
+#Vertrauensintervall
+VI_AWV.P<-c(mean_AWV.P+se_AWV.P*t.Wert,mean_AWV.P-se_AWV.P*t.Wert)
+  
+test<-subset(TAB.ObsPred, select=c("WZP_Nr", "BaumNr", "BHD1.mm", "Hoehe1.m",
+                                  "BHD2.mm", "Hoehe2.m", "BHD2.mm.P", "Hoehe2.m.P", "id_obs", "id_pred"))
+
+mean(test$BHD2.mm, na.rm=TRUE)  
+mean(test$BHD2.mm.P, na.rm=TRUE)  
+
+mean(test$Hoehe2.m, na.rm=TRUE)
+mean(test$Hoehe2.m.P, na.rm=TRUE)
+
